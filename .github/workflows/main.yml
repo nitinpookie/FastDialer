@@ -1,11 +1,18 @@
 name: Build APK
+name: Build APK
 on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: unzip -q FastDialer-v2_0.zip
+      - name: Find project
+        run: |
+          ls -la
+          for z in *.zip; do if [ -f "$z" ]; then unzip -q -o "$z"; fi; done
+          S=$(find . -name settings.gradle.kts -not -path "./.git/*" | head -1)
+          if [ -z "$S" ]; then echo "project nahi mila"; ls -R | head -60; exit 1; fi
+          echo "PROJ=$(dirname "$S")" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -14,8 +21,8 @@ jobs:
         with:
           gradle-version: 8.7
       - run: gradle assembleRelease --no-daemon
-        working-directory: FastDialer
+        working-directory: ${{ env.PROJ }}
       - uses: actions/upload-artifact@v4
         with:
           name: FastDialer-APK
-          path: FastDialer/app/build/outputs/apk/release/*.apk
+          path: ${{ env.PROJ }}/app/build/outputs/apk/release/*.apk
